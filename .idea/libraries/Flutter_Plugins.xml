@@ -1,0 +1,15 @@
+<component name="libraryTable">
+  <library name="Flutter Plugins" type="FlutterPluginsLibraryType">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$" />
+      <root url="file://$PROJECT_DIR$/video_player/video_player_android" />
+      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/connectivity_plus-6.1.5" />
+      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/fullscreen_window-1.2.1" />
+      <root url="file://$PROJECT_DIR$/video_player/video_player_web" />
+      <root url="file://$PROJECT_DIR$/video_player/video_player_avfoundation" />
+      <root url="file://$PROJECT_DIR$/video_player/video_player" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
