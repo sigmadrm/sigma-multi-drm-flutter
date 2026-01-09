@@ -39,7 +39,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   VideoPlayerController? _videoController;
 
-  /// Dùng key để ép Flutter recreate Surface / Texture
   int _playerKey = 0;
 
   /// Playlist

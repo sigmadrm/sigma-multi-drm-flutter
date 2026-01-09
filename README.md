@@ -19,7 +19,10 @@ Add the following to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  sigma_video_player: ^1.0.0 # Replace with the latest version
+  sigma_video_player:
+  git:
+    url: https://github.com/sigmadrm/sigma-multi-drm-flutter.git
+    ref: v1.0.0 # Replace with the latest version
 ```
 
 Then run:
@@ -106,7 +109,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   VideoPlayerController? _videoController;
 
-  /// Dùng key để ép Flutter recreate Surface / Texture
   int _playerKey = 0;
 
   /// Playlist
