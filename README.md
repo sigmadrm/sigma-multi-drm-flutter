@@ -20,9 +20,9 @@ Add the following to your `pubspec.yaml` file:
 ```yaml
 dependencies:
   sigma_video_player:
-  git:
-    url: https://github.com/sigmadrm/sigma-multi-drm-flutter.git
-    ref: v1.0.0 # Replace with the latest version
+    git:
+      url: https://github.com/sigmadrm/sigma-multi-drm-flutter.git
+      ref: v1.0.0 # Replace with the latest version
 ```
 
 Then run:

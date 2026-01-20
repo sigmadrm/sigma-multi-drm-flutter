@@ -98,6 +98,7 @@ class _MyAppState extends State<MyApp> {
     _videoController = VideoPlayerController.networkUrl(
       Uri.parse(config.url),
       drmConfiguration: config.drmConfiguration,
+      viewType: VideoViewType.platformView,
     );
 
     await _videoController!.initialize();

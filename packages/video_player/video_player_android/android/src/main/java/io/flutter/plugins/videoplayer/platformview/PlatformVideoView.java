@@ -13,6 +13,7 @@ import androidx.annotation.NonNull;
 
 import com.google.android.exoplayer2.ExoPlayer;
 
+import io.flutter.Log;
 import io.flutter.plugin.platform.PlatformView;
 
 /**
@@ -20,6 +21,7 @@ import io.flutter.plugin.platform.PlatformView;
  * {@link ExoPlayer} instance and displays its video content.
  */
 public final class PlatformVideoView implements PlatformView {
+  private static final String TAG = "PlatformVideoView";
   @NonNull private final SurfaceView surfaceView;
 
   /**
@@ -29,49 +31,47 @@ public final class PlatformVideoView implements PlatformView {
    * @param exoPlayer The ExoPlayer instance used to play the video.
    */
   public PlatformVideoView(@NonNull Context context, @NonNull ExoPlayer exoPlayer) {
-    surfaceView = new SurfaceView(context);
+    Log.e(TAG, "PlatformVideoView Constructor: creating " + this.hashCode());
+    this.surfaceView = new SurfaceView(context);
 
-    if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P) {
-      // Workaround for rendering issues on Android 9 (API 28).
-      // On Android 9, using setVideoSurfaceView seems to lead to issues where the first frame is
-      // not displayed if the video is paused initially.
-      // To ensure the first frame is visible, the surface is directly set using holder.getSurface()
-      // when the surface is created, and ExoPlayer seeks to a position to force rendering of the
-      // first frame.
-      setupSurfaceWithCallback(exoPlayer);
-    } else {
-      if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N_MR1) {
-        // Avoid blank space instead of a video on Android versions below 8 by adjusting video's
-        // z-layer within the Android view hierarchy:
-        surfaceView.setZOrderMediaOverlay(true);
-      }
-      exoPlayer.setVideoSurfaceView(surfaceView);
+    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N_MR1) {
+      // Avoid blank space instead of a video on Android versions below 8 by adjusting video's
+      // z-layer within the Android view hierarchy:
+      surfaceView.setZOrderMediaOverlay(true);
     }
+
+    surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
+      @Override
+      public void surfaceCreated(@NonNull SurfaceHolder holder) {
+        Log.e(TAG, "PlatformVideoView surfaceCreated for " + PlatformVideoView.this.hashCode());
+        connectPlayer(exoPlayer, holder);
+      }
+
+      @Override
+      public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
+        Log.e(TAG, "PlatformVideoView surfaceChanged [" + width + "x" + height + "] for " + PlatformVideoView.this.hashCode());
+        connectPlayer(exoPlayer, holder);
+      }
+
+      @Override
+      public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
+        Log.e(TAG, "PlatformVideoView surfaceDestroyed for " + PlatformVideoView.this.hashCode());
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P) {
+          exoPlayer.setVideoSurface(null);
+        }
+      }
+    });
   }
 
-  private void setupSurfaceWithCallback(@NonNull ExoPlayer exoPlayer) {
-    surfaceView
-        .getHolder()
-        .addCallback(
-            new SurfaceHolder.Callback() {
-              @Override
-              public void surfaceCreated(@NonNull SurfaceHolder holder) {
-                exoPlayer.setVideoSurface(holder.getSurface());
-                // Force first frame rendering:
-                exoPlayer.seekTo(1);
-              }
-
-              @Override
-              public void surfaceChanged(
-                  @NonNull SurfaceHolder holder, int format, int width, int height) {
-                // No implementation needed.
-              }
-
-              @Override
-              public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
-                exoPlayer.setVideoSurface(null);
-              }
-            });
+  private void connectPlayer(@NonNull ExoPlayer exoPlayer, @NonNull SurfaceHolder holder) {
+    if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P) {
+      // Workaround for rendering issues on Android 9 (API 28).
+      exoPlayer.setVideoSurface(holder.getSurface());
+      // Force first frame rendering:
+      exoPlayer.seekTo(1);
+    } else {
+      exoPlayer.setVideoSurfaceView(surfaceView);
+    }
   }
 
   /**
@@ -88,6 +88,7 @@ public final class PlatformVideoView implements PlatformView {
   /** Disposes of the resources used by this PlatformView. */
   @Override
   public void dispose() {
+    Log.e(TAG, "PlatformVideoView dispose called for " + this.hashCode());
     surfaceView.getHolder().getSurface().release();
   }
 }
