@@ -1,49 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
 import 'package:sigma_video_player/sigma_video_player.dart';
 
 void main() {
-  runApp(const App());
-}
-
-/// Root app
-class App extends StatelessWidget {
-  const App({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Sigma Player Demo',
-      home: HomePage(),
-    );
-  }
+  runApp(const MyApp());
 }
 
 /// Video configuration model
 class VideoConfig {
+  final String title;
   final String url;
-  final Map<String, String> drmConfiguration; // Base64 JSON (DRM info)
+  final Map<String, String> drmConfiguration;
 
-  const VideoConfig({required this.url, this.drmConfiguration = const {}});
+  const VideoConfig({
+    required this.title,
+    required this.url,
+    this.drmConfiguration = const {},
+  });
 }
 
-/// Home page
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+/// My app
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<MyApp> createState() => _MyAppState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _MyAppState extends State<MyApp> {
   VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
 
-  int _playerKey = 0;
+  int _currentIndex = 0;
+  Key _playerKey = UniqueKey();
 
   /// Playlist
   final List<VideoConfig> _playlist = [
     VideoConfig(
+      title: "Big Buck Bunny (Staging)",
       url:
           "https://sdrm-test.gviet.vn:9080/static/vod_staging/the_box/manifest.mpd",
       drmConfiguration: {
@@ -56,6 +51,7 @@ class _HomePageState extends State<HomePage> {
       },
     ),
     VideoConfig(
+      title: "Big Buck Bunny (Production)",
       url:
           "https://sdrm-test.gviet.vn:9080/static/vod_production/big_bug_bunny/manifest.mpd",
       drmConfiguration: {
@@ -67,143 +63,172 @@ class _HomePageState extends State<HomePage> {
         "sessionId": "session id",
       },
     ),
-    const VideoConfig(url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+    const VideoConfig(
+      title: "Big Buck Bunny Clear",
+      url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    ),
   ];
-
-  int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _playByConfig(_playlist[_currentIndex]);
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
+    initializePlayer();
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     _disposePlayer();
     super.dispose();
   }
 
-  /// -------------------------
-  /// Utils
-  /// -------------------------
-
   Future<void> _disposePlayer() async {
     await _videoController?.dispose();
+    _chewieController?.dispose();
     _videoController = null;
+    _chewieController = null;
   }
 
-  /// -------------------------
-  /// Player init
-  /// -------------------------
-
-  Future<void> _initializePlayer({
-    required String url,
-    required Map<String, String> drmConfiguration,
-  }) async {
-    final controller = VideoPlayerController.networkUrl(
-      Uri.parse(url),
-      drmConfiguration: drmConfiguration,
-    );
-
-    _videoController = controller;
-
-    await controller.initialize();
-    if (!mounted) return;
-
-    await controller.play();
-
-    setState(() {});
-  }
-
-  /// -------------------------
-  /// Playlist control
-  /// -------------------------
-
-  Future<void> _playByConfig(VideoConfig config) async {
+  Future<void> initializePlayer() async {
     await _disposePlayer();
-    _playerKey++;
 
-    await _initializePlayer(
-      url: config.url,
+    final config = _playlist[_currentIndex];
+
+    _videoController = VideoPlayerController.networkUrl(
+      Uri.parse(config.url),
       drmConfiguration: config.drmConfiguration,
     );
-  }
 
-  void _changeVideo() {
-    _currentIndex = (_currentIndex + 1) % _playlist.length;
-    _playByConfig(_playlist[_currentIndex]);
-  }
+    await _videoController!.initialize();
+    if (!mounted) return;
 
-  Future<void> _togglePlayPause() async {
-    final c = _videoController;
-    if (c == null || !c.value.isInitialized) return;
-
-    if (c.value.isPlaying) {
-      await c.pause();
-    } else {
-      await c.play();
-    }
+    _createChewieController(_videoController!);
     setState(() {});
+  }
+
+  void _createChewieController(VideoPlayerController controller) {
+    _chewieController = ChewieController(
+      videoPlayerController: controller,
+      autoPlay: true,
+      looping: false,
+      allowFullScreen: true,
+      allowMuting: true,
+      showControls: true,
+      fullScreenByDefault: false,
+      additionalOptions: (context) {
+        return <OptionItem>[
+          OptionItem(
+            onTap: (context) {
+              Navigator.pop(context); // Close the menu
+              _nextVideo();
+            },
+            iconData: Icons.skip_next,
+            title: 'Next Video',
+          ),
+        ];
+      },
+    );
+  }
+
+  Future<void> _nextVideo() async {
+    _playerKey = UniqueKey();
+    _currentIndex = (_currentIndex + 1) % _playlist.length;
+    await initializePlayer();
+  }
+
+  bool _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      _nextVideo();
+      return true;
+    }
+    return false;
   }
 
   /// -------------------------
   /// UI
   /// -------------------------
 
-  Widget _buildPlayer() {
-    final controller = _videoController;
-
-    if (controller == null || !controller.value.isInitialized) {
-      return const CircularProgressIndicator();
-    }
-
-    if (kIsWeb) {
-      return AspectRatio(
-        aspectRatio: controller.value.aspectRatio,
-        child: VideoPlayer(controller),
-      );
-    }
-
-    return KeyedSubtree(
-      key: ValueKey(_playerKey),
-      child: JkVideoControlPanel(
-        controller,
-        showFullscreenButton: true,
-        showVolumeButton: true,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          const SizedBox(height: 40),
-          Expanded(child: Center(child: _buildPlayer())),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                onPressed: _togglePlayPause,
-                child: Text(
-                  (_videoController != null &&
-                          _videoController!.value.isPlaying)
-                      ? 'Pause'
-                      : 'Play',
+    final current = _playlist[_currentIndex];
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            /// =====================
+            /// VIDEO PLAYER (BOTTOM)
+            /// =====================
+            Positioned.fill(
+              child: Center(
+                key: _playerKey,
+                child:
+                    _chewieController != null &&
+                        _chewieController!
+                            .videoPlayerController
+                            .value
+                            .isInitialized
+                    ? Chewie(controller: _chewieController!)
+                    : const CircularProgressIndicator(),
+              ),
+            ),
+
+            /// =====================
+            /// OVERLAY UI (TOP)
+            /// =====================
+            Positioned(
+              left: 16,
+              right: 16,
+              top: 24,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// Title
+                    Text(
+                      current.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            _chewieController?.enterFullScreen();
+                          },
+                          child: const Text('Fullscreen'),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        ElevatedButton(
+                          onPressed: _nextVideo,
+                          child: const Text('Next Video'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 20),
-              ElevatedButton(
-                onPressed: _changeVideo,
-                child: const Text('Change Video'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 30),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

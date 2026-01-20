@@ -12,11 +12,15 @@ dependencies:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
   video_player:
-    path: video_player/video_player
+    path: packages/video_player/video_player
   video_player_platform_interface:
-    path: video_player/video_player_platform_interface
+    path: packages/video_player/video_player_platform_interface
   video_player_control_panel:
-    path: video_player_control_panel
+    path: packages/video_player_control_panel
+  chewie:
+    path: packages/chewie
+  wakelock_plus:
+    path: packages/wakelock_plus/wakelock_plus
 
 dev_dependencies:
   flutter_test:

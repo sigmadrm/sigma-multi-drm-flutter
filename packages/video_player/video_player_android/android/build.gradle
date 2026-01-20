@@ -1,0 +1,92 @@
+group = 'io.flutter.plugins.videoplayer'
+version = '1.0-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '2.2.21'
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.13.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url "https://maven.sigmadrm.com"
+        }
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    namespace = "io.flutter.plugins.videoplayer"
+    compileSdk = flutter.compileSdkVersion
+
+    defaultConfig {
+        minSdkVersion 24
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    lint {
+        checkAllWarnings = true
+        warningsAsErrors = true
+        disable 'AndroidGradlePluginVersion', 'InvalidPackage', 'GradleDependency', 'NewerVersionAvailable'
+        baseline = file("lint-baseline.xml")
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    dependencies {
+        def sigmaPlayerVersion = "2.19.1.24"
+        implementation "com.sigma.drm:sigma-player-common:${sigmaPlayerVersion}"
+        implementation "com.sigma.drm:sigma-player-container:${sigmaPlayerVersion}"
+        implementation "com.sigma.drm:sigma-player-core:${sigmaPlayerVersion}"
+        implementation "com.sigma.drm:sigma-player-extractor:${sigmaPlayerVersion}"
+        implementation "com.sigma.drm:sigma-player-dash:${sigmaPlayerVersion}"
+        implementation "com.sigma.drm:sigma-player-datasource:${sigmaPlayerVersion}"
+        implementation "com.sigma.drm:sigma-player-decoder:${sigmaPlayerVersion}"
+        implementation "com.sigma.drm:sigma-player-hls:${sigmaPlayerVersion}"
+        implementation "com.sigma.drm:sigma-player-smoothstreaming:${sigmaPlayerVersion}"
+        implementation "com.sigma.drm:sigma-player-ui:${sigmaPlayerVersion}"
+        implementation "com.sigma.drm:sigma-player-rtsp:${sigmaPlayerVersion}"
+
+        testImplementation("junit:junit:4.13.2")
+        testImplementation("androidx.test:core:1.7.0")
+        testImplementation("org.mockito:mockito-core:5.21.0")
+        testImplementation("org.robolectric:robolectric:4.16")
+    }
+
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.returnDefaultValues = true
+        unitTests.all {
+            // The org.gradle.jvmargs property that may be set in gradle.properties does not impact
+            // the Java heap size when running the Android unit tests. The following property here
+            // sets the heap size to a size large enough to run the robolectric tests across
+            // multiple SDK levels.
+            jvmArgs "-Xmx4G"
+            testLogging {
+               events "passed", "skipped", "failed", "standardOut", "standardError"
+               outputs.upToDateWhen {false}
+               showStandardStreams = true
+            }
+        }
+    }
+}
